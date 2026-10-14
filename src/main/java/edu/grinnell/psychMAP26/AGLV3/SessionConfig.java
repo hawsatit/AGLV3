@@ -29,16 +29,33 @@ public class SessionConfig {
     private static final int[][] GROUPS = {{1, 2}, {1, 2}, {2, 1}, {2, 1}};
     private static final boolean[][] FAST = {{true, false}, {false, true}, {true, false}, {false, true}};
 
-    public final int participant;
+    public final String participant;  // three digits, e.g. "005"
     public final String condition;   // "SECPT" or "Control"
     public final int code;           // counterbalance code 1-4
     public final int day1Bank;       // test bank used on Day 1; Day 2 uses the other one
 
-    public SessionConfig(int participant, String condition, int code, int day1Bank) {
+    public SessionConfig(String participant, String condition, int code, int day1Bank) {
         this.participant = participant;
         this.condition = condition;
         this.code = code;
         this.day1Bank = day1Bank;
+    }
+
+    /**
+     * Lab ID for one block, e.g. 11101005:
+     *   1st digit: day (1/2)
+     *   2nd digit: block (1 = first phase, 2 = second phase)
+     *   3rd digit: condition (0 = Control, 1 = SECPT)
+     *   4th digit: presentation rate (0 = Fast, 1 = Slow)
+     *   5th digit: symbol group / image bank (1/2)
+     *   last three: participant number
+     */
+    public String fullId(int day, int block) {
+        return "" + day + block
+                + (condition.equals("SECPT") ? 1 : 0)
+                + (isi(block) == FAST_ISI ? 0 : 1)
+                + symbolGroup(block)
+                + participant;
     }
 
     public int testBank(int day) {
@@ -64,22 +81,22 @@ public class SessionConfig {
 
     //one-line description of a counterbalance code, e.g. "Block 1: Group 1 Fast -> Block 2: Group 2 Slow"
     public static String describeCode(int code) {
-        SessionConfig c = new SessionConfig(0, "", code, 1);
+        SessionConfig c = new SessionConfig("", "", code, 1);
         return "Block 1: Group " + c.symbolGroup(1) + " " + c.speed(1)
                 + "  ->  Block 2: Group " + c.symbolGroup(2) + " " + c.speed(2);
     }
 
-    public static File configFile(int participant) {
+    public static File configFile(String participant) {
         return new File(RESULTS_DIR, "participant_" + participant + "_config.properties");
     }
 
-    public static File resultsFile(int participant, int day) {
+    public static File resultsFile(String participant, int day) {
         return new File(RESULTS_DIR, "participant_" + participant + "_day" + day + ".csv");
     }
 
     public void save() throws IOException {
         Properties p = new Properties();
-        p.setProperty("participant", String.valueOf(participant));
+        p.setProperty("participant", participant);
         p.setProperty("condition", condition);
         p.setProperty("counterbalanceCode", String.valueOf(code));
         p.setProperty("day1TestBank", String.valueOf(day1Bank));
@@ -90,7 +107,7 @@ public class SessionConfig {
     }
 
     //returns null if no saved setup exists for this participant
-    public static SessionConfig load(int participant) throws IOException {
+    public static SessionConfig load(String participant) throws IOException {
         File f = configFile(participant);
         if (!f.exists()) {
             return null;

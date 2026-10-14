@@ -78,18 +78,16 @@ public class AGLV3 {
         }
     }
 
-    // Helper to get a positive integer (participant number)
-    private static int askPositiveInt(Scanner scanner, String prompt) {
+    // Helper to get the participant number (1-999), returned as three digits: 5 and 005 both give "005"
+    private static String askParticipantNumber(Scanner scanner) {
         String error = "";
         while (true) {
-            String input = setupPrompt(scanner, error + prompt);
-            try {
-                int result = Integer.parseInt(input);
-                if (result > 0) {
-                    return result;
-                }
-            } catch (NumberFormatException ignored) {}
-            error = "Invalid input \"" + input + "\". Please enter a positive number.\n\n";
+            String input = setupPrompt(scanner, error + "Please enter participant number, 1-999 (e.g. 5 or 005).\n"
+                    + "Use the same number on Day 1 and Day 2; the program builds the full ID.");
+            if (input.matches("\\d{1,3}") && Integer.parseInt(input) > 0) {
+                return String.format("%03d", Integer.parseInt(input));
+            }
+            error = "Invalid input \"" + input + "\". Please enter a number from 1 to 999.\n\n";
         }
     }
 
@@ -107,7 +105,7 @@ public class AGLV3 {
     }
 
     // Day 1: enter the condition and code; the test bank is picked at random
-    private static SessionConfig newConfig(Scanner scanner, int participant) {
+    private static SessionConfig newConfig(Scanner scanner, String participant) {
         String condition = askCondition(scanner);
         int code = askCounterbalanceCode(scanner);
         int day1Bank = (Math.random() < 0.5) ? 1 : 2;
@@ -115,7 +113,7 @@ public class AGLV3 {
     }
 
     // Day 2: reuse the Day 1 setup, or enter it by hand if it can't be found
-    private static SessionConfig day2Config(Scanner scanner, int participant) throws IOException {
+    private static SessionConfig day2Config(Scanner scanner, String participant) throws IOException {
         SessionConfig saved = SessionConfig.load(participant);
         if (saved != null) {
             return saved;
@@ -139,7 +137,8 @@ public class AGLV3 {
         s.append("  Counterbalance:    code ").append(config.code).append("\n");
         for (int block = 1; block <= 2; block++) {
             int group = config.symbolGroup(block);
-            s.append("    Block ").append(block).append(": Group ").append(group)
+            s.append("    Block ").append(block).append(": ID ").append(config.fullId(day, block))
+                    .append("  Group ").append(group)
                     .append(" (").append(SessionConfig.imageFolder(group)).append("), ")
                     .append(config.speed(block)).append(" (").append(config.isi(block)).append(" ms ISI)\n");
         }
@@ -197,18 +196,29 @@ public class AGLV3 {
         }
     }
 
+    // Rebuilds all_results.csv; a failure only warns, since this session's own file is already saved
+    private static void updateCombinedResults() {
+        try {
+            System.out.println(ResultsCombiner.combine(new File(SessionConfig.RESULTS_DIR)));
+        } catch (IOException e) {
+            System.out.println("WARNING: " + e.getMessage() + "\nThis session's results are still saved in its own file.");
+        }
+    }
+
     private static void quit(FileWriter logWriter, File resultsFile) throws IOException {
         logWriter.close();
         clearConsole();
-        System.out.println("Session aborted. Trials completed so far are saved in " + resultsFile.getPath());
+        System.out.println("Session aborted. Scores of completed blocks are saved in " + resultsFile.getPath() + "\n"
+                + "(the unfinished block was not recorded).\n");
+        updateCombinedResults();
         System.exit(0);
     }
 
     /**
      * Runs one block: learning (Day 1 only) followed by the test.
-     * Each test trial is written to the results file as soon as it is answered.
+     * Returns the number of test trials answered correctly.
      */
-    private static void runBlock(Scanner scanner, FileWriter logWriter, File resultsFile, SessionConfig config,
+    private static int runBlock(Scanner scanner, FileWriter logWriter, File resultsFile, SessionConfig config,
                                  int day, int block, SymbolSentenceGenerator generator)
             throws IOException, InterruptedException {
         int isi = config.isi(block);
@@ -249,6 +259,7 @@ public class AGLV3 {
                 + "Press Enter to begin.");
         scanner.nextLine();
 
+        int score = 0;
         int questionNumber = 1;
         while (generator.hasNextTest()) {
             //retrieve the pair of labeled sentences and the same sentences as images
@@ -266,27 +277,24 @@ public class AGLV3 {
             }
             window.close();
 
-            // Ask for participant to choose 1 or 2, timing from when the question appears
-            long askedAt = System.nanoTime();
+            // Ask for participant to choose 1 or 2
             int choice = askTestChoice(scanner, questionNumber);
-            long rt = (System.nanoTime() - askedAt) / 1_000_000;
             if (choice == -1) {
                 quit(logWriter, resultsFile);
             }
-
-            int correctIndex = labeledSentences.get(0).isCorrect == 1 ? 1 : 2;
-            int chosenIsCorrect = labeledSentences.get(choice - 1).isCorrect;
-            int violation = labeledSentences.get(0).violatedRule;
-
-            logWriter.write(config.participant + "," + day + "," + config.condition + "," + config.code + ","
-                    + config.testBank(day) + "," + block + "," + config.symbolGroup(block) + ","
-                    + config.speed(block) + "," + isi + "," + questionNumber + "," + choice + ","
-                    + chosenIsCorrect + "," + correctIndex + "," + violation + "," + rt + "\n");
-            logWriter.flush();
+            score += labeledSentences.get(choice - 1).isCorrect;
 
             questionNumber++;
             Thread.sleep(1000);
         }
+        return score;
+    }
+
+    // Writes one block's row (FullID, number correct) as soon as the block ends
+    private static void writeScore(FileWriter logWriter, SessionConfig config, int day, int block, int score)
+            throws IOException {
+        logWriter.write(config.fullId(day, block) + "," + score + "\n");
+        logWriter.flush();
     }
 
     //main function does not take any command line arguments
@@ -301,7 +309,7 @@ public class AGLV3 {
         File resultsFile;
         while (true) {
             day = askChoice(scanner, "Select session day:\n1) Day 1 (learning + test)\n2) Day 2 (delayed test only)", 1, 2);
-            int participant = askPositiveInt(scanner, "Please enter participant number (without the day digit):");
+            String participant = askParticipantNumber(scanner);
 
             resultsFile = SessionConfig.resultsFile(participant, day);
             if (resultsFile.exists()) {
@@ -330,11 +338,10 @@ public class AGLV3 {
             config.save();
         }
 
-        //creates the output file, one row per test trial
+        //creates the output file, one row per block: FullID and number correct (out of 24)
         new File(SessionConfig.RESULTS_DIR).mkdirs();
         FileWriter logWriter = new FileWriter(resultsFile);
-        logWriter.write("Participant,Day,Condition,CounterbalanceCode,TestBank,Block,SymbolGroup,Speed,ISI_ms,"
-                + "Trial,Chosen,Correct,CorrectIndex,Violation,RT_ms\n");
+        logWriter.write("FullID,Score\n");
         logWriter.flush();
 
         clearConsole();
@@ -349,7 +356,8 @@ public class AGLV3 {
         System.out.println("\nPlease wait for the experimenter's instructions, then press Enter.");
         scanner.nextLine();
 
-        runBlock(scanner, logWriter, resultsFile, config, day, 1, generators[0]);
+        int score1 = runBlock(scanner, logWriter, resultsFile, config, day, 1, generators[0]);
+        writeScore(logWriter, config, day, 1, score1);
 
         //experimenter pause between blocks (third saliva sample on Day 1)
         String input = "";
@@ -363,7 +371,8 @@ public class AGLV3 {
             }
         }
 
-        runBlock(scanner, logWriter, resultsFile, config, day, 2, generators[1]);
+        int score2 = runBlock(scanner, logWriter, resultsFile, config, day, 2, generators[1]);
+        writeScore(logWriter, config, day, 2, score2);
 
         //close the file editor
         logWriter.close();
@@ -373,6 +382,9 @@ public class AGLV3 {
         scanner.nextLine();
         clearConsole();
         System.out.println("Session complete. Results saved to " + resultsFile.getPath());
+        System.out.println("Block 1: " + config.fullId(day, 1) + "  score " + score1 + "/24");
+        System.out.println("Block 2: " + config.fullId(day, 2) + "  score " + score2 + "/24\n");
+        updateCombinedResults();
         System.exit(0);
     }
 }

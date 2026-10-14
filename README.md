@@ -19,7 +19,7 @@ Each run of the program is one participant's whole session for one day:
 Setup prompts:
 
 1. **Day:** 1 or 2.
-2. **Participant number:** without the day digit.
+2. **Participant number:** 1–999 (e.g. `5` or `005`), the same on both days. The program builds the full 8-digit ID.
 3. **Day 1 only:**
    - Stress condition (SECPT or Control).
    - Counterbalance code:
@@ -39,20 +39,36 @@ Fast = 100 ms between symbols, Slow = 2000 ms. Each symbol is shown for 500 ms, 
 
 The test bank (1 or 2) for Day 1 is chosen at random, and Day 2 always uses the other bank. In each test, exactly half the trials show the correct sentence first.
 
-Between blocks the program waits for the experimenter to type `next`. Typing `quit` during a block aborts the session; trials already answered stay saved.
+Between blocks the program waits for the experimenter to type `next`. Typing `quit` during a block aborts the session; scores of finished blocks stay saved, and the unfinished block is not recorded.
 
 ## Results
-`results/participant_<N>_day<D>.csv` has one row per test trial:
+`results/participant_<N>_day<D>.csv` has one row per block:
 
-`Participant,Day,Condition,CounterbalanceCode,TestBank,Block,SymbolGroup,Speed,ISI_ms,Trial,Chosen,Correct,CorrectIndex,Violation,RT_ms`
+```
+FullID,Score
+11101005,17
+12112005,15
+```
 
-- `Correct` is 1 if the grammatical sentence was chosen.
-- `Violation` is the rule the trial tests:
-  - 1 = missing A phrase
-  - 2 = D must follow A, G must follow C
-  - 3 = missing F word
-  - 4 = C must precede F
-- `RT_ms` is the time from the question appearing to the answer.
+- `FullID` is the 8-digit lab ID for that block, built by the program. It is also shown on the setup summary.
+
+  | Digit | Meaning |
+  |---|---|
+  | 1 | Day (1 or 2) |
+  | 2 | Block (1 = first phase, 2 = second phase) |
+  | 3 | Condition (0 = Control, 1 = SECPT) |
+  | 4 | Rate (0 = Fast, 1 = Slow) |
+  | 5 | Symbol group / image bank (1 or 2) |
+  | 6–8 | Participant number |
+
+  For example, `11101005` is Day 1, Block 1, SECPT, Fast, Group 1, participant 5.
+- `Score` is the number of test trials answered correctly, out of 24.
+
+### Combined spreadsheet
+`results/all_results.csv` has every block score in one file, in the same `FullID,Score` format, grouped by participant. The program rebuilds it at the end of each session from all the per-day files. The per-day files are only ever read, so they stay the real record.
+
+- If `all_results.csv` is open in Excel when a session ends, it can't be updated. The program warns and carries on; run `Combine results.bat` once it's closed.
+- To merge data from other computers, copy their `participant_<N>_day<D>.csv` files into `results/` and run `Combine results.bat`. Duplicate IDs are reported as warnings.
 
 The program never overwrites an existing results file.
 
