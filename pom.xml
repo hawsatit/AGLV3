@@ -6,14 +6,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>edu.grinnell.psychMAP26</groupId>
-    <artifactId>AGLV2</artifactId>
+    <artifactId>AGLV3</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release> <!-- Java 21 = class version 65 -->
-        <exec.mainClass>edu.grinnell.psychMAP26.AGLV2.AGLV2</exec.mainClass>
+        <exec.mainClass>edu.grinnell.psychMAP26.AGLV3.AGLV3</exec.mainClass>
     </properties>
 
     <dependencies>

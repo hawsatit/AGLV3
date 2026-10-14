@@ -1,14 +1,64 @@
-# AGL Speed Reader
+# AGL Speed Reader (AGLV3)
 [Tanadanai (Fui) Hawsatitam]
 
 ***
 
 ## Description
-This program is a stimuli presenter which will be used for the 2025 Psychology MAP investigating the effects of processing speed and exercise on Statistical Learning
+This program is a stimuli presenter for the 2026 Psychology MAP investigating the effects of acute stress and presentation rate on visual statistical learning.
+
+Each run of the program is one participant's whole session for one day:
+
+- **Day 1:** Block 1 (100 learning sentences, then 24 test trials), an experimenter pause, then Block 2.
+- **Day 2:** the same two blocks as a delayed test (test trials only).
+
+## Running
+**On another person's Windows PC (no Java needed):** run `./build-windows.sh` on a computer with a JDK. It creates `dist/AGLV3-windows.zip`, which contains the program, the images and its own Java runtime. Unzip it and double-click `Start AGLV3.bat`. Instructions for experimenters are in `HOW TO RUN.txt` inside the zip.
+
+**From the source code:** double-click `AGLV3.bat`. It compiles and starts the program from whatever folder it is in. Java (JDK 21 or newer) must be installed.
+
+Setup prompts:
+
+1. **Day:** 1 or 2.
+2. **Participant number:** without the day digit.
+3. **Day 1 only:**
+   - Stress condition (SECPT or Control).
+   - Counterbalance code:
+
+   | Code | Block 1 | Block 2 |
+   |---|---|---|
+   | 1 | Group 1 Fast | Group 2 Slow |
+   | 2 | Group 1 Slow | Group 2 Fast |
+   | 3 | Group 2 Fast | Group 1 Slow |
+   | 4 | Group 2 Slow | Group 1 Fast |
+
+4. **Day 2:** the Day 1 setup is loaded automatically from `results/participant_<N>_config.properties`.
+
+Check the summary screen, then type `y`.
+
+Fast = 100 ms between symbols, Slow = 2000 ms. Each symbol is shown for 500 ms, with a 2000 ms pause between sentences. Group 1 symbols are in `img/`, Group 2 in `img2/`.
+
+The test bank (1 or 2) for Day 1 is chosen at random, and Day 2 always uses the other bank. In each test, exactly half the trials show the correct sentence first.
+
+Between blocks the program waits for the experimenter to type `next`. Typing `quit` during a block aborts the session; trials already answered stay saved.
+
+## Results
+`results/participant_<N>_day<D>.csv` has one row per test trial:
+
+`Participant,Day,Condition,CounterbalanceCode,TestBank,Block,SymbolGroup,Speed,ISI_ms,Trial,Chosen,Correct,CorrectIndex,Violation,RT_ms`
+
+- `Correct` is 1 if the grammatical sentence was chosen.
+- `Violation` is the rule the trial tests:
+  - 1 = missing A phrase
+  - 2 = D must follow A, G must follow C
+  - 3 = missing F word
+  - 4 = C must precede F
+- `RT_ms` is the time from the question appearing to the answer.
+
+The program never overwrites an existing results file.
 
 ## Sources
 
-java version 23.0.2
+Java 21 (JDK)
 
 Apache Net Beans IDE
 

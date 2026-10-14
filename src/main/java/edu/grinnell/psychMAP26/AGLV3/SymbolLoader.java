@@ -4,7 +4,7 @@
  */
 
 
-package edu.grinnell.psychMAP26.AGLV2;
+package edu.grinnell.psychMAP26.AGLV3;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -36,8 +36,12 @@ public class SymbolLoader {
     private BufferedImage[] loadCategory(String category, int count, String group) throws IOException {
         BufferedImage[] images = new BufferedImage[count];
         for (int i = 0; i < count; i++) {
-            String path = group + "/" + category + "_" + i + ".png";
-            images[i] = ImageIO.read(new File(path));
+            File file = new File(group, category + "_" + i + ".png");
+            if (!file.exists()) {
+                throw new IOException("Missing symbol image: " + file.getAbsolutePath()
+                        + "\n(Run the program from the AGLV3 folder that contains img and img2.)");
+            }
+            images[i] = ImageIO.read(file);
         }
         return images;
     }
