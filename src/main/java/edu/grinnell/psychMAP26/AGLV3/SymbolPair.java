@@ -1,4 +1,4 @@
-package edu.grinnell.psychMAP26.AGLV2;
+package edu.grinnell.psychMAP26.AGLV3;
 
 /**
  * A structure to hold symbol category and index.

@@ -1,4 +1,4 @@
-package edu.grinnell.psychMAP26.AGLV2;
+package edu.grinnell.psychMAP26.AGLV3;
 
 import javax.swing.*;
 import java.awt.*;
