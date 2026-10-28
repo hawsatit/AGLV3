@@ -381,9 +381,7 @@ public class AGLV3 {
                 + "Please notify the experimenter!");
         scanner.nextLine();
         clearConsole();
-        System.out.println("Session complete. Results saved to " + resultsFile.getPath());
-        System.out.println("Block 1: " + config.fullId(day, 1) + "  score " + score1 + "/24");
-        System.out.println("Block 2: " + config.fullId(day, 2) + "  score " + score2 + "/24\n");
+        System.out.println("Session complete. Results saved to " + resultsFile.getPath() + "\n");
         updateCombinedResults();
         System.exit(0);
     }

@@ -1,1 +1,5 @@
 dist/
+target/
+results/
+.DS_Store
+Thumbs.db
